@@ -1,1 +1,303 @@
-# -.-
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ملكوت.كوم - اختبار المزامير</title>
+<style>
+body {font-family:Arial,sans-serif;margin:0;padding:0;background:linear-gradient(to bottom,#0b1e4f 0%,#04122e 100%);color:#fff;}
+.header{text-align:center;padding:20px;background:linear-gradient(to right,#0b1e4f,#04122e);border-bottom:3px solid gold;position:relative;}
+.header h1{font-size:2.5em;color:gold;margin:0;}
+.teamNameDisplay{font-size:1.2em;color:#ffeb3b;margin-top:5px;}
+.container{max-width:900px;margin:20px auto;background:#0b1e4f;padding:30px;border-radius:12px;box-shadow:0 0 20px rgba(0,0,0,0.5);}
+#startScreen{text-align:center;}
+#startScreen input[type="text"]{padding:12px;font-size:16px;width:70%;margin-bottom:20px;border-radius:6px;border:1px solid gold;text-align:center;}
+#startScreen button{padding:12px 25px;font-size:16px;border:none;border-radius:6px;background:gold;color:#0b1e4f;cursor:pointer;}
+#startScreen button:hover{background:#ffeb3b;}
+.question{display:none;margin-bottom:30px;padding:20px;border:2px solid gold;border-radius:10px;background:#04122e;}
+.question.active{display:block;}
+.question h3{margin-top:0;color:#ffeb3b;}
+.options label{display:block;margin:8px 0;padding:8px;border-radius:6px;cursor:pointer;border:1px solid #ffeb3b;}
+.options label:hover{background-color:rgba(255,235,59,0.2);}
+.correctAns{background:#004d00!important;border:2px solid #00ff00!important;}
+.wrongAns{background:#5d0000!important;border:2px solid #ff0000!important;}
+.open-answer{width:100%;padding:12px;margin:15px 0;border:1px solid gold;border-radius:6px;font-size:16px;resize: vertical;background:#0b1e4f;color:#fff;}
+.buttons{margin-top:30px;text-align:center;display:flex;justify-content:center;gap:20px;}
+button{padding:12px 25px;background:gold;color:#0b1e4f;border:none;border-radius:6px;cursor:pointer;font-size:16px;}
+button:hover{background:#ffeb3b;}
+button:disabled{background:#555;cursor:not-allowed;}
+#result{margin-top:20px;font-weight:bold;color:#4caf50;text-align:center;font-size:1.5em;padding:20px;border-radius:10px;display:none;background-color:rgba(76,175,80,0.2);}
+#celebration{display:none;text-align:center;font-size:2em;color:gold;margin-top:15px;animation: confetti 1s infinite;}
+@keyframes confetti{0%{transform:rotate(0deg);}50%{transform:rotate(15deg);}100%{transform:rotate(-15deg);}}
+#passwordScreen{display:none;text-align:center;}
+#passwordScreen input[type="password"]{padding:12px;font-size:16px;width:60%;margin-bottom:20px;border-radius:6px;border:1px solid gold;text-align:center;}
+#manualGrading{display:none;}
+.gradeBtn{margin:5px;padding:5px 10px;border:none;border-radius:5px;cursor:pointer;}
+.gradeBtn0,.gradeBtn05,.gradeBtn1{background:#333;color:white;}
+#showMistakes{display:none;margin-top:20px;padding:10px;border-radius:6px;background:#ffeb3b;color:#0b1e4f;cursor:pointer;font-weight:bold;}
+.mistakeItem{border:1px solid gold;padding:10px;margin:10px 0;background:#04122e;}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>بي ثيؤريموس.كوم</h1>
+<div class="teamNameDisplay" id="teamNameDisplay"></div>
+</div>
+<div class="container">
+<div id="startScreen">
+<h2>اكتب اسم الفريق للبدء:</h2>
+<input type="text" id="teamNameInput" placeholder="اسم الفريق"><br>
+<button onclick="startQuiz()">ابدأ</button>
+</div>
+
+<div id="quizScreen" style="display:none;"></div>
+
+<div id="submitManual" style="display:none;text-align:center;margin-top:20px;">
+<button onclick="showPasswordScreen()">تصحيح المقالي</button>
+</div>
+
+<div id="passwordScreen">
+<h3>ادخل كلمة سر المعلم</h3>
+<input type="password" id="teacherPassword" placeholder="كلمة السر"><br>
+<button onclick="checkPassword()">دخول</button>
+<p id="passwordMsg" style="color:red;"></p>
+</div>
+
+<div id="manualGrading"></div>
+<div id="result"></div>
+<div id="celebration">🎉🎉 مبروك! نتيجتك ممتازة! 🎉🎉</div>
+<audio id="successSound" src="https://www.soundjay.com/human/applause-01.mp3"></audio>
+
+<div id="showMistakes" onclick="displayMistakes()">شوف غلطاتك</div>
+<div id="mistakesDiv"></div>
+</div>
+
+<script>
+let currentQuestionIndex=0;
+let teamName="";
+let userAnswers=[];
+let mcqScore=0;
+let manualScores=[];
+let mcqMistakes=[];
+
+const questions=[
+{type:"mcq",q:"1- قبل تسبحة عشية في سبوت واحاد الصوم الكبير تقال مزامير",options:["غروب ونوم","التاسعة والغروب والنوم","لا تصلي مزامير"],answer:"التاسعة والغروب والنوم"},
+{type:"mcq",q:"2- تبدأ تسبحة عشية بلحن ..",options:["تين ثينو","ني إثنوس تيرو","تين أوأوشت ام افيوت"],answer:"ني إثنوس تيرو"},
+{type:"mcq",q:"3- بعض أبيات او آيات من المزمور تسمي ...",options:["ابصاليات","ذكصولوجيات","استيخونات"],answer:"استيخونات"},
+{type:"mcq",q:"4- هليلويا فاي بي بي هو المزمور رقم ..",options:["مزمور 117 ويقال ايام الفطار والاعياد السيدية","مزمور 42 ويقال في أيام الصوم الكبير وصوم نينوي","مزمور 75 ويقال في أيام الاصواام وسبوت واحاد الصوم الكبير"],answer:"مزمور 117 ويقال ايام الفطار والاعياد السيدية"},
+{type:"mcq",q:"5- يقال قبل الهوسات الأربعة في تسبحة نصف الليل ..",options:["لحن ني إثنوس تيرو","ابصالية اليوم","الهوس الكبير"],answer:"الهوس الكبير"},
+{type:"mcq",q:"6- نغمة المزمور السنوي علي لحن چي أفساچي تقال ...",options:["في كهيك","في رفع بخور عشية وبالأخص في صوم وأعياد السيدة العذراء","في الأعياد السيدية"],answer:"في رفع بخور عشية وبالأخص في صوم وأعياد السيدة العذراء"},
+{type:"open",q:"7- متى مارس آباؤنا الرسل الأطهار خدمة الصلاة بالمزامير؟"},
+{type:"open",q:"8- لماذا نصلي بالأجبية ؟"},
+{type:"open",q:"9- ما هو ترتيب تسبحة عشية بعد صلاة المزامير ؟!"},
+{type:"open",q:"10- بدأ سفر المزامير قبل ميلاد السيد المسيح له كل المجد بكام قرن وبعده بكام قرن؟"},
+{type:"open",q:"10-1 ترجم الجملة الآتية: انتِ سترى و أنتم ستكتبون و أنا سأؤمن"},
+{type:"open",q:"10-2 Ⲭ̀ⲛⲁⲙⲟϣⲓ ⲟⲩⲟϩ ⲧⲉⲛⲛⲁⲓ̀"},
+{type:"open",q:"10-3 Ⲥⲉⲛⲁϯ ⲟⲩⲟϩ ϥ̀ⲛⲁϭⲓ"},
+{type:"open",q:"10-4 هي سوف تبكى"},
+{type:"open",q:"10-5 Ϯⲛⲁϯ"}
+];
+
+userAnswers=new Array(questions.length).fill("");
+
+function startQuiz(){
+  let nameInput=document.getElementById("teamNameInput").value.trim();
+  if(nameInput===""){alert("الرجاء إدخال اسم الفريق");return;}
+  teamName=nameInput;
+  document.getElementById("teamNameDisplay").innerText="الفريق: "+teamName;
+  document.getElementById("startScreen").style.display="none";
+  document.getElementById("quizScreen").style.display="block";
+  showQuestion();
+}
+
+function showQuestion(){
+  const quizDiv=document.getElementById("quizScreen");
+  quizDiv.innerHTML="";
+  const q=questions[currentQuestionIndex];
+  const qDiv=document.createElement("div");
+  qDiv.className="question active";
+
+  const h3=document.createElement("h3");
+  h3.innerText=q.q;
+  qDiv.appendChild(h3);
+
+  if(q.type==="mcq"){
+    const optDiv=document.createElement("div");
+    optDiv.className="options";
+    q.options.forEach(opt=>{
+      const label=document.createElement("label");
+      const input=document.createElement("input");
+      input.type="radio";
+      input.name=`q${currentQuestionIndex}`;
+      input.value=opt;
+      if(userAnswers[currentQuestionIndex]===opt) input.checked=true;
+      input.onchange=function(){userAnswers[currentQuestionIndex]=this.value;};
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(" "+opt));
+      optDiv.appendChild(label);
+    });
+    qDiv.appendChild(optDiv);
+  }else{
+    const textarea=document.createElement("textarea");
+    textarea.className="open-answer";
+    textarea.value=userAnswers[currentQuestionIndex];
+    textarea.oninput=function(){userAnswers[currentQuestionIndex]=this.value;};
+    qDiv.appendChild(textarea);
+  }
+
+  const btnDiv=document.createElement("div");
+  btnDiv.className="buttons";
+
+  const prevBtn=document.createElement("button");
+  prevBtn.innerText="السؤال السابق";
+  prevBtn.disabled=currentQuestionIndex===0;
+  prevBtn.onclick=function(){currentQuestionIndex--; showQuestion();};
+  btnDiv.appendChild(prevBtn);
+
+  if(currentQuestionIndex<questions.length-1){
+    const nextBtn=document.createElement("button");
+    nextBtn.innerText="السؤال التالي";
+    nextBtn.onclick=function(){currentQuestionIndex++; showQuestion();};
+    btnDiv.appendChild(nextBtn);
+  }else{
+    const finishBtn=document.createElement("button");
+    finishBtn.innerText="انهاء الأسئلة وفتح تصحيح المقالي";
+    finishBtn.onclick=function(){
+      saveMCQAnswers();
+      document.getElementById("quizScreen").style.display="none";
+      document.getElementById("submitManual").style.display="block";
+    };
+    btnDiv.appendChild(finishBtn);
+  }
+
+  qDiv.appendChild(btnDiv);
+  quizDiv.appendChild(qDiv);
+}
+
+function saveMCQAnswers(){
+  mcqScore=0;
+  mcqMistakes=[];
+  questions.forEach((q,i)=>{
+    const chosen=userAnswers[i] ? userAnswers[i] : "";
+    if(q.type==="mcq"){
+      if(chosen===q.answer){
+        mcqScore++;
+      } else {
+        mcqMistakes.push({q:q.q,chosen:chosen,correct:q.answer});
+      }
+    }
+  });
+}
+
+function showPasswordScreen(){
+  document.getElementById("submitManual").style.display="none";
+  document.getElementById("passwordScreen").style.display="block";
+}
+
+function checkPassword(){
+  const pw=document.getElementById("teacherPassword").value;
+  if(pw==="1234"){
+    document.getElementById("passwordScreen").style.display="none";
+    showManualGrading();
+  } else {
+    document.getElementById("passwordMsg").innerText="كلمة السر خاطئة";
+  }
+}
+
+function showManualGrading(){
+  const div=document.getElementById("manualGrading");
+  div.style.display="block";
+  div.innerHTML="<h2>تصحيح الأسئلة المقالية</h2>";
+  const manualCount=questions.filter(q=>q.type==="open").length;
+  manualScores=new Array(manualCount).fill(0);
+  let manualIndex=0;
+  for(let i=0;i<questions.length;i++){
+    if(questions[i].type==="open"){
+      const q=questions[i];
+      const ans=userAnswers[i] ? userAnswers[i] : "";
+      if(ans==="") mcqMistakes.push({q:q.q,chosen:"(فارغ)",correct:"(تحتاج إجابة)"});
+      const qDiv=document.createElement("div");
+      qDiv.style.border="1px solid gold";
+      qDiv.style.padding="10px";
+      qDiv.style.margin="10px 0";
+      qDiv.innerHTML=`<p><b>${q.q}</b></p><p>إجابة الطالب: ${ans}</p>
+      <div>
+      <button class="gradeBtn gradeBtn0" onclick="assignGrade(${manualIndex},0,this)">0 😞</button>
+      <button class="gradeBtn gradeBtn05" onclick="assignGrade(${manualIndex},0.5,this)">0.5 ➖</button>
+      <button class="gradeBtn gradeBtn1" onclick="assignGrade(${manualIndex},1,this)">1 🙂</button>
+      </div>`;
+      div.appendChild(qDiv);
+      manualIndex++;
+    }
+  }
+  const finishBtn=document.createElement("button");
+  finishBtn.innerText="حساب الدرجة النهائية";
+  finishBtn.onclick=calculateFinalScore;
+  div.appendChild(finishBtn);
+}
+
+function assignGrade(i,val,btn){
+  manualScores[i]=val;
+  const parent=btn.parentElement;
+  Array.from(parent.children).forEach(b=>b.style.background="#333");
+  if(val===0) btn.style.background="#f44336";
+  if(val===0.5) btn.style.background="#ffeb3b";
+  if(val===1) btn.style.background="#4caf50";
+}
+
+function calculateFinalScore(){
+  let manualTotal=manualScores.reduce((a,b)=>a+b,0);
+  let finalScore=manualTotal+mcqScore;
+  document.getElementById("manualGrading").style.display="none";
+  const result=document.getElementById("result");
+  result.style.display="block";
+  const totalPossible=questions.length;
+  result.innerText=`مجموعك النهائي: ${finalScore} من ${totalPossible}`;
+  if(finalScore>=Math.ceil(0.7*totalPossible)){
+    document.getElementById("celebration").style.display="block";
+    const audio=document.getElementById("successSound");
+    audio.play();
+    setTimeout(()=>{audio.pause();audio.currentTime=0;},5000);
+  }
+  if(mcqMistakes.length>0){
+    document.getElementById("showMistakes").style.display="block";
+  }
+}
+
+function displayMistakes(){
+  const div=document.getElementById("mistakesDiv");
+  div.innerHTML="";
+  mcqMistakes.forEach(m=>{
+    const item=document.createElement("div");
+    item.className="question active";
+    item.innerHTML=`<h3>${m.q}</h3>`;
+    const questionObj = questions.find(q=>q.q===m.q);
+    if(questionObj.type==="mcq"){
+      questionObj.options.forEach(opt=>{
+        const optDiv=document.createElement("div");
+        optDiv.style.padding="10px";
+        optDiv.style.margin="5px 0";
+        optDiv.style.borderRadius="6px";
+        optDiv.style.border="1px solid #ffeb3b";
+        if(opt===m.correct) optDiv.classList.add("correctAns");
+        if(opt===m.chosen && opt!==m.correct) optDiv.classList.add("wrongAns");
+        optDiv.innerText=opt;
+        item.appendChild(optDiv);
+      });
+    } else { // open question
+      const optDiv=document.createElement("div");
+      optDiv.style.padding="10px";
+      optDiv.style.margin="5px 0";
+      optDiv.style.borderRadius="6px";
+      optDiv.style.border="1px solid #ffeb3b";
+      optDiv.classList.add("wrongAns");
+      optDiv.innerText = m.chosen;
+      item.appendChild(optDiv);
+    }
+    div.appendChild(item);
+  });
+  window.scrollTo(0,div.offsetTop);
+}
+</script>
+</body>
+</html>
